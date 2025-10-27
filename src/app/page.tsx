@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, SkipForward, SkipBack, Volume2, VolumeX, Shuffle, Repeat } from 'lucide-react';
+import Image from 'next/image';
+import { Play, Pause, SkipForward, SkipBack, Volume2, VolumeX, Shuffle, Repeat, RotateCcw, RotateCw } from 'lucide-react';
 
 interface Track {
   id: number;
@@ -13,7 +14,7 @@ interface Track {
 }
 
 export default function AudioSimulator() {
-  // ====== REQUISITO 5: ESTADOS COM useState ======
+  // ====== ESTADOS ======
   const [playlist, setPlaylist] = useState<Track[]>([
     {
       id: 1,
@@ -42,41 +43,37 @@ export default function AudioSimulator() {
   ]);
 
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);        // REQUISITO 1: Estado Play/Pause
+  const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [volume, setVolume] = useState(70);                 // REQUISITO 2: Estado Volume
-  const [isMuted, setIsMuted] = useState(false);            // REQUISITO 3: Estado Mute
+  const [volume, setVolume] = useState(70);
+  const [isMuted, setIsMuted] = useState(false);
   const [isShuffleOn, setIsShuffleOn] = useState(false);
   const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');
   
   const audioRef = useRef<HTMLAudioElement>(null);
   const currentTrack = playlist[currentTrackIndex];
 
-  // ====== REQUISITO 2: useEffect para VOLUME ======
+  // ====== REQUISITO: useEffect para VOLUME ======
   useEffect(() => {
     if (audioRef.current) {
-      // Aplica volume ao elemento audio
-      // Se estiver mutado, volume = 0, senão usa o valor do slider
       audioRef.current.volume = isMuted ? 0 : volume / 100;
     }
-  }, [volume, isMuted]); // Executa quando volume ou mute mudam
+  }, [volume, isMuted]);
 
   // ====== useEffect para EVENTOS DE ÁUDIO ======
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    // Atualiza tempo atual durante reprodução
     const updateTime = () => setCurrentTime(audio.currentTime);
     
-    // Captura duração quando áudio carrega
     const handleLoadedMetadata = () => {
       const updatedPlaylist = [...playlist];
       updatedPlaylist[currentTrackIndex].duration = audio.duration;
       setPlaylist(updatedPlaylist);
     };
     
-    // Decide o que fazer quando música termina
+    // REQUISITO 5: Reproduzir próxima música automaticamente quando terminar
     const handleEnded = () => {
       if (repeatMode === 'one') {
         audio.currentTime = 0;
@@ -100,19 +97,19 @@ export default function AudioSimulator() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTrackIndex, repeatMode]);
 
-  // ====== REQUISITO 1: FUNÇÃO PLAY/PAUSE ======
+  // ====== REQUISITO: PLAY/PAUSE ======
   const togglePlayPause = () => {
     if (audioRef.current) {
       if (isPlaying) {
-        audioRef.current.pause(); // Pausa o áudio
+        audioRef.current.pause();
       } else {
-        audioRef.current.play();  // Toca o áudio
+        audioRef.current.play();
       }
-      setIsPlaying(!isPlaying);   // Alterna o estado
+      setIsPlaying(!isPlaying);
     }
   };
 
-  // ====== FUNÇÃO PRÓXIMA MÚSICA ======
+  // ====== REQUISITO 5: PRÓXIMA MÚSICA ======
   const handleNext = () => {
     if (isShuffleOn) {
       const randomIndex = Math.floor(Math.random() * playlist.length);
@@ -126,7 +123,7 @@ export default function AudioSimulator() {
     }
   };
 
-  // ====== FUNÇÃO MÚSICA ANTERIOR ======
+  // ====== REQUISITO 5: MÚSICA ANTERIOR ======
   const handlePrevious = () => {
     if (currentTime > 3) {
       if (audioRef.current) {
@@ -142,7 +139,7 @@ export default function AudioSimulator() {
     }
   };
 
-  // ====== FUNÇÃO NAVEGAR NA MÚSICA (Barra de Progresso) ======
+  // ====== REQUISITO 4: CONTROLE DE TEMPO (Slider) ======
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const seekTime = parseFloat(e.target.value);
     setCurrentTime(seekTime);
@@ -151,31 +148,48 @@ export default function AudioSimulator() {
     }
   };
 
-  // ====== REQUISITO 3: FUNÇÃO MUTE/UNMUTE ======
-  const toggleMute = () => {
-    setIsMuted(!isMuted); // Alterna entre mutado e não mutado
+  // ====== REQUISITO 4: AVANÇAR +10 SEGUNDOS ======
+  const skipForward10 = () => {
+    if (audioRef.current) {
+      const newTime = Math.min(audioRef.current.currentTime + 10, currentTrack.duration);
+      audioRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+    }
   };
 
-  // ====== FUNÇÃO SHUFFLE ======
+  // ====== REQUISITO 4: RETROCEDER -10 SEGUNDOS ======
+  const skipBackward10 = () => {
+    if (audioRef.current) {
+      const newTime = Math.max(audioRef.current.currentTime - 10, 0);
+      audioRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+    }
+  };
+
+  // ====== REQUISITO: MUTE/UNMUTE ======
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+  };
+
   const toggleShuffle = () => {
     setIsShuffleOn(!isShuffleOn);
   };
 
-  // ====== FUNÇÃO REPEAT ======
   const cycleRepeat = () => {
     const modes: Array<'off' | 'all' | 'one'> = ['off', 'all', 'one'];
     const currentIndex = modes.indexOf(repeatMode);
     setRepeatMode(modes[(currentIndex + 1) % modes.length]);
   };
 
-  // ====== FUNÇÃO FORMATAR TEMPO (MM:SS) ======
+  // ====== REQUISITO 3: FORMATAR TEMPO (MM:SS) ======
   const formatTime = (seconds: number) => {
+    if (isNaN(seconds)) return '0:00';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // ====== FUNÇÃO SELECIONAR MÚSICA DA PLAYLIST ======
+  // ====== REQUISITO 2: SELECIONAR MÚSICA DA LISTA ======
   const selectTrack = (index: number) => {
     setCurrentTrackIndex(index);
     setCurrentTime(0);
@@ -184,7 +198,6 @@ export default function AudioSimulator() {
     }
   };
 
-  // ====== RENDERIZAÇÃO DO COMPONENTE ======
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
@@ -192,8 +205,8 @@ export default function AudioSimulator() {
           
           {/* ====== CABEÇALHO ====== */}
           <div className="bg-gradient-to-r from-zinc-800 to-zinc-900 p-4">
-            <h1 className="text-2xl font-bold text-white mb-1">Simulador de Áudio</h1>
-            <p className="text-zinc-400 text-sm">Seu player de música completo</p>
+            <h1 className="text-2xl font-bold text-white mb-1">Player de Áudio Avançado</h1>
+            <p className="text-zinc-400 text-sm">Atividade Prática de Multimídia</p>
           </div>
 
           <div className="p-6">
@@ -202,11 +215,14 @@ export default function AudioSimulator() {
             <div className="bg-zinc-800/50 rounded-xl p-6 mb-4 border border-zinc-700">
               
               {/* ====== CAPA DO ÁLBUM ====== */}
-              <div className="w-32 h-32 mx-auto mb-4 bg-zinc-700 rounded-xl flex items-center justify-center shadow-xl overflow-hidden">
-                <img 
+              <div className="w-32 h-32 mx-auto mb-4 bg-zinc-700 rounded-xl flex items-center justify-center shadow-xl overflow-hidden relative">
+                <Image 
                   src={currentTrack.cover} 
                   alt={currentTrack.title}
-                  className="w-full h-full object-cover"
+                  fill
+                  className="object-cover"
+                  priority
+                  unoptimized
                 />
               </div>
 
@@ -216,7 +232,7 @@ export default function AudioSimulator() {
                 <p className="text-zinc-400 text-sm">{currentTrack.artist}</p>
               </div>
 
-              {/* ====== BARRA DE PROGRESSO ====== */}
+              {/* ====== REQUISITO 3 e 4: BARRA DE PROGRESSO E TEMPO ====== */}
               <div className="mb-4">
                 <input
                   type="range"
@@ -229,17 +245,38 @@ export default function AudioSimulator() {
                   style={{
                     background: `linear-gradient(to right, #ffffff 0%, #ffffff ${currentTrack.duration ? (currentTime / currentTrack.duration) * 100 : 0}%, #3f3f46 ${currentTrack.duration ? (currentTime / currentTrack.duration) * 100 : 0}%, #3f3f46 100%)`
                   }}
+                  title="Arraste para alterar posição da música"
                 />
+                {/* REQUISITO 3: EXIBIÇÃO DO TEMPO ATUAL E TOTAL */}
                 <div className="flex justify-between text-xs text-zinc-400 mt-2">
                   <span>{formatTime(currentTime)}</span>
                   <span>{currentTrack.duration ? formatTime(currentTrack.duration) : 'Carregando...'}</span>
                 </div>
               </div>
 
+              {/* ====== REQUISITO 4: BOTÕES -10s e +10s ====== */}
+              <div className="flex justify-center gap-2 mb-4">
+                <button
+                  onClick={skipBackward10}
+                  className="px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-all flex items-center gap-2"
+                  title="Retroceder 10 segundos"
+                >
+                  <RotateCcw size={16} />
+                  <span className="text-sm">-10s</span>
+                </button>
+                <button
+                  onClick={skipForward10}
+                  className="px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-all flex items-center gap-2"
+                  title="Avançar 10 segundos"
+                >
+                  <span className="text-sm">+10s</span>
+                  <RotateCw size={16} />
+                </button>
+              </div>
+
               {/* ====== CONTROLES PRINCIPAIS ====== */}
               <div className="flex items-center justify-center gap-3 mb-4">
                 
-                {/* Botão Shuffle */}
                 <button
                   onClick={toggleShuffle}
                   className={`p-2 rounded-full transition-all ${
@@ -251,7 +288,7 @@ export default function AudioSimulator() {
                   <Shuffle size={16} />
                 </button>
                 
-                {/* Botão Anterior */}
+                {/* REQUISITO 5: BOTÃO MÚSICA ANTERIOR */}
                 <button
                   onClick={handlePrevious}
                   className="p-3 bg-zinc-700 text-white rounded-full hover:bg-zinc-600 transition-all"
@@ -261,18 +298,17 @@ export default function AudioSimulator() {
                   <SkipBack size={20} />
                 </button>
                 
-                {/* ====== REQUISITO 1 + 4: BOTÃO PLAY/PAUSE COM ÍCONE DINÂMICO ====== */}
+                {/* BOTÃO PLAY/PAUSE */}
                 <button
                   onClick={togglePlayPause}
                   className="p-4 bg-white text-black rounded-full hover:scale-105 transition-all shadow-lg"
                   aria-label={isPlaying ? "Pausar" : "Reproduzir"}
                   title={isPlaying ? "Pausar" : "Reproduzir"}
                 >
-                  {/* REQUISITO 4: Ícone muda dinamicamente */}
                   {isPlaying ? <Pause size={24} /> : <Play size={24} className="ml-1" />}
                 </button>
                 
-                {/* Botão Próximo */}
+                {/* REQUISITO 5: BOTÃO PRÓXIMA MÚSICA */}
                 <button
                   onClick={handleNext}
                   className="p-3 bg-zinc-700 text-white rounded-full hover:bg-zinc-600 transition-all"
@@ -282,7 +318,6 @@ export default function AudioSimulator() {
                   <SkipForward size={20} />
                 </button>
                 
-                {/* Botão Repeat */}
                 <button
                   onClick={cycleRepeat}
                   className={`p-2 rounded-full transition-all relative ${
@@ -302,21 +337,17 @@ export default function AudioSimulator() {
                 </button>
               </div>
 
-              {/* ====== REQUISITO 2 + 3: CONTROLE DE VOLUME E MUTE ====== */}
+              {/* ====== CONTROLE DE VOLUME E MUTE ====== */}
               <div className="flex items-center gap-3">
-                
-                {/* ====== REQUISITO 3 + 4: BOTÃO MUTE COM ÍCONE DINÂMICO ====== */}
                 <button 
                   onClick={toggleMute} 
                   className="text-white hover:text-zinc-300 transition-colors" 
                   aria-label={isMuted ? "Ativar Som" : "Silenciar"}
                   title={isMuted ? "Ativar Som" : "Silenciar"}
                 >
-                  {/* REQUISITO 4: Ícone muda dinamicamente */}
                   {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
                 </button>
                 
-                {/* ====== REQUISITO 2: SLIDER DE VOLUME ====== */}
                 <input
                   type="range"
                   min="0"
@@ -331,17 +362,19 @@ export default function AudioSimulator() {
                   title={`Volume: ${isMuted ? 0 : volume}%`}
                 />
                 
-                {/* ====== REQUISITO 4: TEXTO DINÂMICO DO VOLUME ====== */}
                 <span className="text-white text-xs w-10 text-right">
                   {isMuted ? 0 : volume}%
                 </span>
               </div>
             </div>
 
-            {/* ====== PLAYLIST ====== */}
+            {/* ====== REQUISITO 1: LISTAGEM DE MÚSICAS (PELO MENOS 3) ====== */}
             <div className="bg-zinc-800/30 rounded-xl p-4 border border-zinc-700">
-              <h3 className="text-lg font-bold text-white mb-3">Playlist</h3>
+              <h3 className="text-lg font-bold text-white mb-3">
+                📋 Lista de Músicas ({playlist.length} músicas)
+              </h3>
               <div className="space-y-2">
+                {/* REQUISITO 2: USUÁRIO PODE SELECIONAR MÚSICA PARA REPRODUZIR */}
                 {playlist.map((track, index) => (
                   <button
                     key={track.id}
@@ -355,20 +388,28 @@ export default function AudioSimulator() {
                   >
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-md overflow-hidden bg-zinc-700 flex-shrink-0">
-                          <img 
+                        <div className="w-10 h-10 rounded-md overflow-hidden bg-zinc-700 flex-shrink-0 relative">
+                          <Image 
                             src={track.cover} 
                             alt={track.title}
-                            className="w-full h-full object-cover"
+                            fill
+                            className="object-cover"
+                            unoptimized
                           />
                         </div>
                         <div>
-                          <div className="font-semibold text-sm">{track.title}</div>
+                          <div className="font-semibold text-sm flex items-center gap-2">
+                            {index === currentTrackIndex && isPlaying && (
+                              <span className="text-green-500">▶</span>
+                            )}
+                            {track.title}
+                          </div>
                           <div className={`text-xs ${index === currentTrackIndex ? 'text-zinc-700' : 'text-zinc-400'}`}>
                             {track.artist}
                           </div>
                         </div>
                       </div>
+                      {/* REQUISITO 3: MOSTRAR TEMPO TOTAL DA MÚSICA */}
                       <div className={`text-xs ${index === currentTrackIndex ? 'text-zinc-700' : 'text-zinc-400'}`}>
                         {track.duration ? formatTime(track.duration) : '--:--'}
                       </div>
@@ -409,3 +450,4 @@ export default function AudioSimulator() {
     </div>
   );
 }
+
