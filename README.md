@@ -198,7 +198,7 @@ npm start
 
 ### Vídeo Demonstrativo
 
-📹 **[https://drive.google.com/file/d/1HndXFZSNCubb3qa0YwUnBV-Mi-bkRiuj/view?usp=drive_link]** - Demonstração de 3 minutos mostrando:
+📹 [https://drive.google.com/file/d/1HndXFZSNCubb3qa0YwUnBV-Mi-bkRiuj/view?usp=drive_link] - Demonstração de 3 minutos mostrando:
 
 - Listagem e seleção de músicas
 - Controle de tempo com slider e botões
